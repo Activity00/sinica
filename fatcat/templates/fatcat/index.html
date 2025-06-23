@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备监控系统</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard {
+            display: flex;
+            padding: 1rem;
+            gap: 1rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .device-list-container {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .preview-container {
+            flex: 2;
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .device-card {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .device-card:hover {
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .device-card.active {
+            border: 2px solid #3498db;
+            background-color: #f8f9fa;
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background-color: #2ecc71;
+        }
+
+        .status-offline {
+            background-color: #e74c3c;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+
+        button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-start {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-stop {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-photo {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .btn-action {
+            background-color: #2980b9; /* 蓝色按钮，可自定义颜色 */
+            color: white;
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .image-preview {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #ecf0f1;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            position: relative;
+            min-height: 400px;
+        }
+
+        #device-image {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+        }
+
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.2rem;
+            border-radius: 6px;
+        }
+
+        .connection-status {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+            justify-content: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .online {
+            background-color: #2ecc71;
+        }
+
+        .offline {
+            background-color: #e74c3c;
+        }
+
+        .no-devices {
+            text-align: center;
+            padding: 2rem;
+            color: #7f8c8d;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .error {
+            background-color: #fadbd8;
+            color: #c0392b;
+            border: 1px solid #f5b7b1;
+        }
+
+        .success {
+            background-color: #d5f5e3;
+            color: #27ae60;
+            border: 1px solid #a3e4d7;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .stat-card {
+            background-color: #f8f9fa;
+            padding: 0.8rem;
+            border-radius: 6px;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>监控浇水系统</h1>
+</div>
+
+<div class="dashboard">
+    <div class="device-list-container">
+        <h2>设备列表 <span id="device-count">共 0 个设备</span></h2>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-devices">0</div>
+                <div class="stat-label">总设备</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="online-devices">0</div>
+                <div class="stat-label">在线</div>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div id="devices-loading" class="loading">加载设备列表中...</div>
+        <div id="no-devices" class="no-devices" style="display: none;">
+            <i class="fas fa-plug" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+            <p>没有可用的设备</p>
+        </div>
+        <div id="device-list"></div>
+    </div>
+
+    <div class="preview-container">
+        <h2>设备预览</h2>
+
+        <div class="connection-status">
+            <div class="status-item">
+                <div class="status-indicator" id="status-ws"></div>
+                <span>WebSocket连接</span>
+            </div>
+            <div class="status-item">
+                <div class="status-indicator" id="status-api"></div>
+                <span>API连接</span>
+            </div>
+        </div>
+
+        <div class="image-preview">
+            <div id="image-preview-loading" class="loading" style="display: none;">加载中...</div>
+            <img id="device-image" src="" alt="设备预览" style="display: none;">
+            <div id="no-preview" style="text-align: center; color: #7f8c8d;">
+                <i class="fas fa-image" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>选择设备开始预览</p>
+            </div>
+        </div>
+
+        <div id="soil-info" style="text-align: center; margin: 1rem 0; display: none;">
+            <h3>土壤湿度</h3>
+            <div><strong>当前湿度：</strong><span id="soil-value">--</span>%</div>
+            <div><strong>状态：</strong><span id="soil-status">--</span></div>
+            <button class="btn-action" onclick="fetchSoilData()">刷新土壤湿度</button>
+        </div>
+
+
+        <div class="controls">
+            <button class="btn-start" id="btn-start" disabled onclick="startStream(appState.activeDeviceId)">
+                <i class="fas fa-play"></i> 启动流
+            </button>
+            <button class="btn-stop" id="btn-stop" disabled onclick="stopStream(appState.activeDeviceId)">
+                <i class="fas fa-stop"></i> 停止流
+            </button>
+            <button class="btn-photo" id="btn-photo" disabled onclick="takePhoto(appState.activeDeviceId)">
+                <i class="fas fa-camera"></i> 拍照
+            </button>
+            <button class="btn-action" id="btn-water" disabled onclick="startWater(appState.activeDeviceId)">
+                <i class="fas fa-tint"></i> 浇水
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 系统状态
+    const appState = {
+        activeDeviceId: null,
+        devices: [],
+        ws: {
+            connection: null,
+            connected: false,
+            retries: 0,
+            maxRetries: 5,
+        },
+        apiStatus: 'unknown'
+    };
+
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', function () {
+        initPage();
+        initWebSocket();
+        window.addEventListener('beforeunload', cleanup);
+
+        // 每30秒检查一次设备列表
+        setInterval(fetchDeviceList, 30000);
+        // setInterval(fetchSoilData, 30000);
+
+    });
+
+    // 初始化页面
+    function initPage() {
+        showLoading(true, 'devices-loading');
+        fetchDeviceList();
+        checkApiStatus();
+    }
+
+    // 初始化WebSocket连接
+    function initWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/device/`;
+
+        appState.ws.connection = new WebSocket(wsUrl);
+
+        appState.ws.connection.onopen = function () {
+            console.log('WebSocket连接已建立');
+            appState.ws.connected = true;
+            appState.ws.retries = 0;
+            updateConnectionStatus();
+        };
+
+        appState.ws.connection.onmessage = function (event) {
+            console.log('收到WebSocket消息:', event)
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'frame') {
+                    handleDeviceImage(data.frame);
+                } else if (data.type === 'device_update') {
+                    updateDeviceList(data.devices);
+                } else if (data.type === 'soil') {
+                    updateSoilDisplay(data.soil_data);
+                }
+            } catch (error) {
+                console.error('解析WebSocket消息失败:', error);
+            }
+        };
+
+        appState.ws.connection.onclose = function () {
+            console.log('WebSocket连接已关闭');
+            appState.ws.connected = false;
+            updateConnectionStatus();
+
+            // 尝试重新连接
+            if (appState.ws.retries < appState.ws.maxRetries) {
+                appState.ws.retries++;
+                const delay = Math.min(1000 * appState.ws.retries, 5000);
+                console.log(`将在 ${delay}ms 后尝试重新连接WebSocket...`);
+                setTimeout(initWebSocket, delay);
+            }
+        };
+
+        appState.ws.connection.onerror = function (error) {
+            console.error('WebSocket错误:', error);
+            appState.ws.connected = false;
+            updateConnectionStatus();
+        };
+    }
+
+    // 从 API 获取设备列表
+    async function fetchDeviceList() {
+        try {
+            const response = await fetch('/api/devices/');
+            if (!response.ok) throw new Error('网络请求失败');
+
+            const data = await response.json();
+            updateDeviceList(data.devices || []);
+
+            showLoading(false, 'devices-loading');
+            showElement('device-list', data.devices.length > 0);
+            showElement('no-devices', data.devices.length === 0);
+
+            document.getElementById('device-count').textContent = `共 ${data.devices.length} 个设备`;
+            appState.apiStatus = 'online';
+            updateConnectionStatus();
+        } catch (error) {
+            console.error('获取设备列表失败:', error);
+            showMessage('error', '获取设备列表失败，请检查网络连接');
+            showLoading(false, 'devices-loading');
+            showElement('no-devices', true);
+            appState.apiStatus = 'offline';
+            updateConnectionStatus();
+        }
+    }
+
+    async function fetchSoilData() {
+        if (!appState.activeDeviceId) return;
+
+        try {
+            const response = await fetch('/api/get_soil/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({device_id: appState.activeDeviceId})
+            });
+
+            if (!response.ok) throw new Error('请求失败');
+
+            const data = await response.json();
+            if (data && typeof data.soil_humidity === 'number') {
+                updateSoilDisplay(data.soil_humidity);
+            }
+        } catch (error) {
+            console.error('获取土壤湿度失败', error);
+        }
+    }
+
+
+    // 更新设备列表
+    function updateDeviceList(devices) {
+        appState.devices = devices.map(device => ({
+            device_id: device.device_id,
+            online: true
+        }));
+
+        renderDeviceList();
+        updateDeviceStats();
+    }
+
+    function updateSoilDisplay(data) {
+        const valueElement = document.getElementById('soil-value');
+        const statusElement = document.getElementById('soil-status');
+        const container = document.getElementById('soil-info');
+
+        const analog = data.analog;
+        const digital = data.digital;
+
+        // 显示模拟量湿度值
+        valueElement.textContent = analog.toFixed(1) + '%';
+
+        // 根据数字量判断状态（0 = 湿润，1 = 干燥）
+        const isDry = digital === 1;
+        statusElement.textContent = isDry ? '干燥' : '湿润';
+        statusElement.style.color = isDry ? '#e74c3c' : '#2ecc71';
+
+        container.style.display = 'block';
+    }
+
+
+    // 检查API状态
+    async function checkApiStatus() {
+        try {
+            const response = await fetch('/api/devices/');
+            if (response.ok) {
+                appState.apiStatus = 'online';
+            } else {
+                appState.apiStatus = 'offline';
+            }
+        } catch (error) {
+            appState.apiStatus = 'offline';
+        }
+        updateConnectionStatus();
+    }
+
+    // 更新连接状态显示
+    function updateConnectionStatus() {
+        // WebSocket状态
+        const wsIndicator = document.getElementById('status-ws');
+        wsIndicator.className = 'status-indicator ' +
+            (appState.ws.connected ? 'online' : 'offline');
+
+        // API状态
+        const apiIndicator = document.getElementById('status-api');
+        apiIndicator.className = 'status-indicator ' + appState.apiStatus;
+    }
+
+    // 渲染设备列表
+    function renderDeviceList() {
+        const container = document.getElementById('device-list');
+        container.innerHTML = '';
+
+        appState.devices.forEach(device => {
+            const card = document.createElement('div');
+            card.className = `device-card ${appState.activeDeviceId === device.device_id ? 'active' : ''}`;
+            card.id = `device-card-${device.device_id}`;
+
+            card.innerHTML = `
+                    <h3>设备 ${device.device_id}</h3>
+                    <div class="device-status">
+                        <span class="status-dot ${device.online ? 'status-online' : 'status-offline'}"></span>
+                        <span>${device.online ? '在线' : '离线'}</span>
+                    </div>
+                `;
+
+            card.addEventListener('click', () => selectDevice(device.device_id));
+            container.appendChild(card);
+        });
+    }
+
+    // 选择设备
+    function selectDevice(deviceId) {
+        // 更新UI
+        document.querySelectorAll('.device-card').forEach(card => {
+            card.classList.remove('active');
+        });
+
+        const selectedCard = document.getElementById(`device-card-${deviceId}`);
+        if (selectedCard) {
+            selectedCard.classList.add('active');
+        }
+
+        console.log(`选择设备: ${deviceId}`);
+
+        // 更新状态
+        appState.activeDeviceId = deviceId;
+
+        // 更新控制按钮状态
+        updateControlButtons(deviceId);
+
+        // 显示预览区域
+        document.getElementById('no-preview').style.display = 'none';
+        document.getElementById('device-image').style.display = 'none';
+
+        // fetchSoilData(); // 切换设备时加载土壤湿度
+    }
+
+    // 更新控制按钮状态
+    function updateControlButtons(deviceId) {
+        const device = appState.devices.find(d => d.device_id === deviceId);
+        if (!device) return;
+
+        const startBtn = document.getElementById('btn-start');
+        const stopBtn = document.getElementById('btn-stop');
+        const photoBtn = document.getElementById('btn-photo');
+        const waterBtn = document.getElementById('btn-water');
+
+        startBtn.disabled = !device.online || !appState.apiStatus === 'online';
+        stopBtn.disabled = !device.online || !appState.apiStatus === 'online';
+        photoBtn.disabled = !device.online || !appState.apiStatus === 'online';
+        waterBtn.disabled = !device.online || !appState.apiStatus === 'online';
+    }
+
+    // 处理设备图像
+    function handleDeviceImage(frameData) {
+        const imgElement = document.getElementById('device-image');
+        imgElement.src = `data:image/jpeg;base64,${frameData}`;
+        imgElement.style.display = 'block';
+        document.getElementById('no-preview').style.display = 'none';
+        showLoading(false, 'image-preview-loading');
+    }
+
+    // 更新设备统计信息
+    function updateDeviceStats() {
+        const total = appState.devices.length;
+        const online = appState.devices.filter(d => d.online).length;
+
+        document.getElementById('total-devices').textContent = total;
+        document.getElementById('online-devices').textContent = online;
+    }
+
+    // 通过HTTP API控制设备
+    async function sendDeviceCommand(endpoint, deviceId) {
+        try {
+            showLoading(true, 'image-preview-loading');
+
+            const response = await fetch(`/api/${endpoint}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({device_id: deviceId})
+            });
+
+            if (!response.ok) throw new Error('命令执行失败');
+
+            const data = await response.json();
+            console.log(`${endpoint} 响应:`, data);
+
+            if (data.status === "ok") {
+                showMessage('success', data.message);
+                return true;
+            } else {
+                showMessage('error', data.message);
+                return false;
+            }
+        } catch (error) {
+            console.error(`${endpoint} 请求失败:`, error);
+            showMessage('error', '网络请求失败，请检查连接');
+            return false;
+        } finally {
+            showLoading(false, 'image-preview-loading');
+        }
+    }
+
+    // 启动视频流
+    async function startStream(deviceId) {
+        if (!deviceId) return;
+
+        await sendDeviceCommand('start_stream', deviceId)
+    }
+
+    // 停止视频流
+    async function stopStream(deviceId) {
+        if (!deviceId) return;
+
+        if (await sendDeviceCommand('stop_stream', deviceId)) {
+            // 清除预览图像
+            //document.getElementById('device-image').src = '';
+            //document.getElementById('device-image').style.display = 'none';
+            //document.getElementById('no-preview').style.display = 'block';
+        }
+    }
+
+    // 拍照
+    async function takePhoto(deviceId) {
+        if (!deviceId) return;
+
+        await sendDeviceCommand('take_photo', deviceId)
+    }
+
+    async function startWater(deviceId) {
+        if (!deviceId) return;
+
+        await sendDeviceCommand('start_water', deviceId);
+    }
+
+    // 显示/隐藏加载状态
+    function showLoading(show, elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    // 显示/隐藏元素
+    function showElement(elementId, show) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.style.display = show ? 'block' : 'none';
+        }
+    }
+
+    // 显示消息
+    function showMessage(type, text) {
+        const messageElement = document.getElementById('message');
+        messageElement.className = `message ${type}`;
+        messageElement.textContent = text;
+        messageElement.style.display = 'block';
+
+        // 3秒后自动消失
+        setTimeout(() => {
+            messageElement.style.display = 'none';
+        }, 3000);
+    }
+
+    // 清理资源
+    function cleanup() {
+        if (appState.ws.connection) {
+            appState.ws.connection.close();
+        }
+    }
+</script>
+</body>
+</html>
