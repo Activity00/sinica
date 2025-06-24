@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>设备命令控制台</title>
+</head>
+<body>
+<h1>设备控制台</h1>
+
+<button onclick="sendCommand('water')">💧 浇水</button>
+<button onclick="sendCommand('photo')">📷 拍照</button>
+
+<h2>当前命令队列</h2>
+<ul id="cmd-list"></ul>
+
+<h2>执行结果</h2>
+<ul id="result-list"></ul>
+
+<script>
+function sendCommand(cmd) {
+    fetch('/api/add_command/', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({command: cmd})
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+    });
+}
+
+function fetchAll() {
+    // 拉命令队列
+    fetch('/api/get_commands/?web=true')
+      .then(res => res.json())
+      .then(data => {
+        const cmdList = document.getElementById('cmd-list');
+        cmdList.innerHTML = '';
+        data.commands.forEach(cmd => {
+          const li = document.createElement('li');
+          li.textContent = cmd;
+          cmdList.appendChild(li);
+        });
+      });
+
+    // 拉执行结果
+    fetch('/api/get_results/')
+      .then(res => res.json())
+      .then(data => {
+        const resultList = document.getElementById('result-list');
+        resultList.innerHTML = '';
+        data.results.forEach(r => {
+          const li = document.createElement('li');
+          li.innerHTML = `[${r.time}] <b>${r.device_id}</b> - ${r.type} - ${r.result}`;
+          if (r.type === 'photo' && r.photo_data) {
+            const img = document.createElement('img');
+            img.src = `data:image/jpeg;base64,${r.photo_data}`;
+            img.width = 160;
+            li.appendChild(document.createElement('br'));
+            li.appendChild(img);
+          }
+          resultList.appendChild(li);
+        });
+      });
+}
+
+// 页面加载时启动轮询
+fetchAll();
+setInterval(fetchAll, 5000);
+</script>
+</body>
+</html>

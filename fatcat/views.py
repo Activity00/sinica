@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -163,3 +164,73 @@ def get_soil(request):
         return JsonResponse({"status": "ok", "message": f"获取土壤湿度命令已发送到 {device_id}"})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)})
+
+
+# ********************************** poll 相关接口 **********************************
+
+COMMAND_QUEUE = []
+COMMAND_RESULTS = []
+
+
+def command_page(request):
+    return render(request, 'fatcat/commands.html', {
+        'commands': COMMAND_QUEUE,
+        'results': reversed(COMMAND_RESULTS),
+    })
+
+
+@csrf_exempt
+def add_command(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        command = data.get('command')
+        if command and command in ['photo', 'water']:
+            COMMAND_QUEUE.append(command)
+            return JsonResponse({'status': 'ok', 'message': f'Command "{command}" added.'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid command'})
+
+
+@csrf_exempt
+def get_commands(request):
+    global COMMAND_QUEUE
+    if request.GET.get('web'):
+        return JsonResponse({'commands': COMMAND_QUEUE})
+
+    cmds = COMMAND_QUEUE.copy()
+    COMMAND_QUEUE = []  # 清空队列
+    return JsonResponse({'commands': cmds})
+
+
+@csrf_exempt
+def get_results(request):
+    # 返回全部结果或限定条数
+    return JsonResponse({'results': list(reversed(COMMAND_RESULTS))})
+
+
+@csrf_exempt
+def report_result(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'})
+
+        result = {
+            'device_id': data.get('device_id'),
+            'type': data.get('type'),
+            'result': data.get('result'),
+            'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        # 如果是拍照，还带有图片
+        if data.get('type') == 'photo':
+            result['photo_data'] = data.get('data')  # base64 string
+
+        COMMAND_RESULTS.append(result)
+        # 保持只保留最新10条记录
+        if len(COMMAND_RESULTS) > 10:
+            COMMAND_RESULTS.pop(0)  # 移除最旧的记录
+
+        return JsonResponse({'status': 'ok'})
+
+    return JsonResponse({'status': 'error'})
