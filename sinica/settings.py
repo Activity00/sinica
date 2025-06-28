@@ -127,3 +127,5 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
+
+SECRET_TOKEN = 'q9JzZMx7WvY2KtGpBcRl6NnD8HsV4jLk3_'

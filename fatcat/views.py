@@ -2,8 +2,9 @@ import json
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.conf import settings
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
@@ -11,6 +12,9 @@ from fatcat.consumers import online_devices
 
 
 def index(request):
+    if request.GET.get('token') != settings.SECRET_TOKEN:
+        return HttpResponseForbidden('Invalid Token')
+
     return render(request, 'fatcat/index.html', {})
 
 
