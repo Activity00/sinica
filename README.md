@@ -277,7 +277,7 @@ A：`InMemoryChannelLayer` 只能在单进程内转发消息，需改用 Redis C
 2. 关闭 `DEBUG`，配置 `ALLOWED_HOSTS`，将 `SECRET_KEY`、`SECRET_TOKEN`、WiFi 凭据改为**环境变量**读取，不要把真实凭据提交到仓库。
 3. 前置 Nginx 反向代理并启用 **WSS/TLS**，注意为 WebSocket 配置 `Upgrade` / `Connection` 头。
 4. 为 ESP32-CAM 配置独立电源，并考虑为设备连接增加鉴权（当前 `device_id` 即可接入）。
-5. 添加 `.gitignore`，排除 `db.sqlite3`、`__pycache__/`、`.venv/` 等产物。
+5. 仓库已提供 `.gitignore`（排除 `db.sqlite3`、`__pycache__/`、`.venv/`、`.env` 等产物与凭据），请勿强制添加被忽略的文件。
 
 ## Roadmap
 
